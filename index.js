@@ -104,6 +104,7 @@ class SortableFlatList extends Component {
         return shouldSet;
       },
       onPanResponderMove: Animated.event([null, { [props.horizontal ? 'moveX' : 'moveY']: this._moveAnim }], {
+        useNativeDriver: false, // true causes runtime errors.
         listener: (evt, gestureState) => {
           const { moveX, moveY } = gestureState
           const { horizontal } = this.props
@@ -135,15 +136,24 @@ class SortableFlatList extends Component {
         const activeItemSize = horizontal ? activeMeasurements.width : activeMeasurements.height
         this._releaseVal = pos - (isAfterActive ? activeItemSize : 0)
         if (this._releaseAnim) this._releaseAnim.stop()
-        this._releaseAnim = Animated.spring(this._moveAnim, {
-          toValue: this._releaseVal,
-          stiffness: 5000,
-          damping: 500,
-          mass: 3,
-          useNativeDriver: true,
-        })
 
-        this._releaseAnim.start(this.onReleaseAnimationEnd)
+        const { releaseAnimation } = this.props
+        if (releaseAnimation) {
+          this._releaseAnim = releaseAnimation(this._moveAnim, this._releaseVal)
+        } else {
+          this._releaseAnim = Animated.spring(this._moveAnim, {
+            toValue: this._releaseVal,
+            stiffness: 5000,
+            damping: 500,
+            mass: 3,
+            useNativeDriver: true,
+          })
+        }
+
+        if (this._releaseAnim)
+          this._releaseAnim.start(this.onReleaseAnimationEnd)
+        else
+          this.onReleaseAnimationEnd();
       }
     })
     this.state = initialState
