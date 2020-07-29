@@ -262,6 +262,16 @@ class SortableFlatList extends Component {
       try {
         // Using stashed ref prevents measuring an unmounted componenet, which throws an error
         !!this._refs[index] && this._refs[index].measureInWindow(((x, y, width, height) => {
+          // 2020-07-28: we added this code to workaround the fact that
+          // measureInWindow() returns incorrect values for FlatList elements
+          // that are offscreen.  This solution will only work correctly for
+          // lists where each element has the same height.
+          if ((y < 0) && this._measurements[0]) {
+            // Did not get a good measurement.  Use values from element 0.
+            x = this._measurements[0].x;
+            y = this._measurements[0].y + (index * height);
+          }
+
           if ((width || height) && activeRow === -1) {
             const ypos = y + this._scrollOffset
             const xpos = x + this._scrollOffset
@@ -287,7 +297,10 @@ class SortableFlatList extends Component {
       this.onReleaseAnimationEnd()
       return
     }
-    this._refs.forEach((ref, index) => this.measureItem(ref, index))
+
+// 2020-07-28: we commented out this line because it has the wrong params
+// and when fixed it seems to cause various dragging problems.
+//    this._refs.forEach((ref, index) => this.measureItem(ref, index))
     this._spacerIndex = index
     this.setState({
       activeRow: index,
